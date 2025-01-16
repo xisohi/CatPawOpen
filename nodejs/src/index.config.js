@@ -1,8 +1,6 @@
 export default {
-    kunyu77: {
-        testcfg: {
-            bbbb: 'aaaaa',
-        },
+    drpyS: {
+        config_url: 'http://127.0.0.1:5757/config/1?sub=all&pwd=',
     },
     ffm3u8: {
         url: 'https://cj.ffzyapi.com/api.php/provide/vod/',
