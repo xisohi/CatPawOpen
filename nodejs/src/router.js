@@ -6,9 +6,13 @@ import copymanga from './spider/book/copymanga.js';
 import ffm3u8 from './spider/video/ffm3u8.js';
 import drpyS from './spider/video/drpyS.js';
 import {request} from "./util/request.js";
+import {extractTags} from "./util/tool.js";
 
 const spiders = [ffm3u8, push, alist, _13bqg, copymanga, drpyS];
 const spiderPrefix = '/spider';
+let dsSites = [];
+let dsParses = [];
+let drpyS_data = {};
 
 /**
  * A function to initialize the router.
@@ -18,22 +22,72 @@ const spiderPrefix = '/spider';
  */
 export default async function router(fastify) {
     // register all spider router
-    spiders.forEach((spider) => {
+    // spiders.forEach((spider) => {
+    //     const path = spiderPrefix + '/' + spider.meta.key + '/' + spider.meta.type;
+    //     if ((spider === drpyS && cfg.default.drpyS.enable_home_site) || spider !== drpyS) {
+    //         fastify.register(spider.api, {prefix: path});
+    //         console.log('Register spider: ' + path);
+    //     }
+    //
+    // });
+    for (const spider of spiders) {
         const path = spiderPrefix + '/' + spider.meta.key + '/' + spider.meta.type;
+        if (spider === drpyS && !cfg.default.drpyS.enable_home_site) { // 没启用ds首页就不显示这个源
+            continue
+        } else if (spider === push && cfg.default.drpyS.enable_dspush) { // 启动ds 推送就禁用系统推送
+            continue
+        }
         fastify.register(spider.api, {prefix: path});
         console.log('Register spider: ' + path);
-    });
-    // console.log(cfg.default);
-    // if (cfg.default.drpyS && cfg.default.drpyS.config_url) {
-    //     let drpyS_config_url = cfg.default.drpyS.config_url;
-    //     if (drpyS_config_url && drpyS_config_url.startsWith('http')) {
-    //         let drpyS_data = await request(drpyS_config_url);
-    //         if (drpyS_data.sites_count && drpyS_data.homepage === 'https://github.com/hjdhnx/drpy-node') {
-    //             let drpyS_sites = drpyS_data.sites;
-    //             console.log(drpyS_sites);
-    //         }
-    //     }
-    // }
+    }
+    console.log(cfg.default);
+    if (cfg.default.drpyS && cfg.default.drpyS.config_url) {
+        let drpyS_config_url = cfg.default.drpyS.config_url;
+        if (drpyS_config_url && drpyS_config_url.startsWith('http')) {
+            try {
+
+                drpyS_data = await request(drpyS_config_url);
+                if (drpyS_data.sites_count && drpyS_data.homepage === 'https://github.com/hjdhnx/drpy-node') {
+                    let drpyS_sites = drpyS_data.sites.filter(site => site.type === 4);
+
+                    // console.log(drpyS_sites);
+                    dsSites = drpyS_sites.map((site) => {
+                        let meta = {};
+                        let skey = site.key;
+                        let sname = site.name;
+                        let stags = extractTags(sname);
+                        if (skey === 'push_agent') {
+                            meta.type = 4;
+                        } else if (stags.includes('书')) {
+                            meta.type = 10;
+                        } else if (stags.includes('画')) {
+                            meta.type = 20;
+                        } else if (stags.includes('听')) {
+                            meta.type = 30;
+                        } else {
+                            meta.type = 7;
+                        }
+                        meta.key = skey === 'push_agent' ? 'push' : skey;
+                        meta.name = site.name;
+                        meta.api = spiderPrefix + '/' + 'drpyS' + '/' + meta.type + '/' + meta.key;
+                        meta.ext = {api: site.api, extend: site.ext};
+                        return meta;
+                    });
+
+                    dsParses = drpyS_data.parses;
+
+
+                    dsSites.forEach((site) => {
+                        const path = site.api;
+                        fastify.register(drpyS.api, {prefix: path});
+                        console.log('Register spider: ' + path);
+                    });
+                }
+            } catch (e) {
+                console.log(`加载配置发生了错误: ${e.message}`)
+            }
+        }
+    }
     /**
      * @api {get} /check 检查
      */
@@ -80,11 +134,17 @@ export default async function router(fastify) {
                         },
                         color: fastify.config.color || [],
                     };
-                    spiders.forEach((spider) => {
+                    for (const spider of spiders) {
+                        if (spider === drpyS && !cfg.default.drpyS.enable_home_site) { // 没启用ds首页就不显示这个源
+                            continue
+                        } else if (spider === push && cfg.default.drpyS.enable_dspush) { // 启动ds 推送就禁用系统推送
+                            continue
+                        }
+
                         let meta = Object.assign({}, spider.meta);
                         meta.api = spiderPrefix + '/' + meta.key + '/' + meta.type;
                         meta.key = 'nodejs_' + meta.key;
-                        meta.ext = '';
+                        meta.ext = {};
                         const stype = spider.meta.type;
                         if (stype < 10) {
                             config.video.sites.push(meta);
@@ -97,32 +157,11 @@ export default async function router(fastify) {
                         } else if (stype >= 40 && stype < 50) {
                             config.pan.sites.push(meta);
                         }
-                    });
-
-                    console.log(cfg.default);
-                    if (cfg.default.drpyS && cfg.default.drpyS.config_url) {
-                        let drpyS_config_url = cfg.default.drpyS.config_url;
-                        if (drpyS_config_url && drpyS_config_url.startsWith('http')) {
-                            let drpyS_data = await request(drpyS_config_url);
-                            if (drpyS_data.sites_count && drpyS_data.homepage === 'https://github.com/hjdhnx/drpy-node') {
-                                let drpyS_sites = drpyS_data.sites.filter(site => site.type === 4);
-                                console.log(drpyS_sites);
-                                const sites = drpyS_sites.map((site) => {
-                                    let meta = {};
-                                    meta.key = site.key;
-                                    meta.name = site.name;
-                                    meta.type = site.type;
-                                    meta.api = '/spider/drpyS/4';
-                                    meta.ext = {api: site.api, extend: site.ext};
-                                    return meta;
-                                });
-                                config.video.sites = config.video.sites.concat(sites);
-                                drpyS.updateSiteMap(sites);
-                                config.parses = drpyS_data.parses;
-                            }
-                        }
                     }
 
+                    config.video.sites = config.video.sites.concat(dsSites);
+                    drpyS.updateSiteMap(dsSites);
+                    config.parses = dsParses;
                     console.log(JSON.stringify(config));
                     reply.send(config);
                 }

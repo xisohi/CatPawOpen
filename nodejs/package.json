@@ -1,17 +1,20 @@
 {
     "name": "cat_vod_nodejs_fastify",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "CatVodOpen nodejs config api server demo.",
     "type": "module",
     "scripts": {
         "dev": "cross-env DEV_HTTP_PORT=3006 nodemon --config nodemon.json src/dev.js",
-        "build": "rimraf dist && cross-env NODE_ENV=production node esbuild.js && cross-env NODE_ENV=production node esbuild-config.js",
-        "build:copy": "rimraf dist && cross-env NODE_ENV=production node esbuild.js && cross-env NODE_ENV=production node esbuild-config.js && node copyDist.js \"D:\\\\soft\\\\猫影视\\\\Release\\\\data\\\\flutter_assets\\\\asset\\\\js\"",
+        "_build": "rimraf dist && node esbuild.js && node esbuild-config.js",
+        "build": "cross-env NODE_ENV=production npm run _build",
+        "build:copy": "cross-env NODE_ENV=production npm run _build && node copyDist.js D:\\soft\\猫影视\\Release\\data\\flutter_assets\\asset\\js",
+        "build:dbg": "cross-env NODE_ENV=development npm run _build",
         "build:config": "cross-env NODE_ENV=production node esbuild-config.js",
-        "build:rollup": "rimraf dist && cross-env NODE_ENV=production node rollup.js && cross-env NODE_ENV=production node rollup-config.js",
-        "build:rollup:config": "cross-env NODE_ENV=production node rollup-config.js"
+        "build:rollup(obsolete)": "rimraf dist && cross-env NODE_ENV=production node rollup.js && cross-env NODE_ENV=production node rollup-config.js",
+        "build:rollup:config(obsolete)": "cross-env NODE_ENV=production node rollup-config.js",
+        "build-old:copy": "rimraf dist && cross-env NODE_ENV=production node esbuild.js && cross-env NODE_ENV=production node esbuild-config.js && node copyDist.js E:\\soft\\windows_release_open_2.0.3_beta2\\Release\\data\\flutter_assets\\asset\\js"
     },
-    "author": "",
+    "author": "道长",
     "devDependencies": {
         "@babel/plugin-transform-runtime": "^7.23.9",
         "@babel/preset-env": "^7.23.9",
@@ -38,6 +41,7 @@
         "iconv-lite": "^0.6.3",
         "node-json-db": "^2.3.0",
         "node-rsa": "^1.1.1",
+        "pako": "^2.1.0",
         "qs": "^6.14.0"
     }
 }
