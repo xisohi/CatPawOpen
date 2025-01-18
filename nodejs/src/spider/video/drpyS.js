@@ -1,6 +1,7 @@
 import {request, post, mergeQuery} from '../../util/request.js';
 import {base64Encode, md5} from '../../util/crypto-util.js';
-import {extractTags} from "../../util/tool.js";
+import {extractTags, shuffleArray, jsonpath} from "../../util/tool.js";
+import batchExecute from '../../util/batchExecute.js';
 import * as cfg from '../../index.config.js';
 
 const meta = {
@@ -246,67 +247,131 @@ async function play(_inReq, _outResp) {
         }
         result = images
     } else { //影视类执行解析、免嗅、嗅探逻辑
-        if (result && result.jx) {
-            console.log(DsCache.parses);
+        if (result && result.jx && result.url) {
+            const input = result.url;
+            // console.log(DsCache.parses);
             // 筛选出json解析
             let parses = DsCache.parses.filter(it => it.type === 1);
-        } else if (result && result.parse) {
-            const sniffer_rule = cfg.default.drpyS.sniffer_rule || 'http((?!http).){12,}?\\.m3u8(?!\\?)';
-            const regex = new RegExp(sniffer_rule);
-            const realUrl = result.url;
-            if (realUrl && regex.test(realUrl)) {
-                result.parse = 0;
-            } else if (realUrl && !regex.test(realUrl)) {
-                if (cfg.default.drpyS.enable_hipy_sniffer && cfg.default.drpyS.hipy_sniffer_url) {
-                    const _js = result.js;
-                    const _parse_extra = result.parse_extra;
-                    const _query = {
-                        url: realUrl,
-                        script: _js ? base64Encode(_js) : undefined,
-                    }
-                    let _url = mergeQuery(cfg.default.drpyS.hipy_sniffer_url, _query);
-                    if (_parse_extra) {
-                        _url += _parse_extra;
-                    }
-                    try {
-                        let _result = await request(_url);
-                        console.log(`hipy嗅探器任务执行${_url} 完毕: ${_result.url}`);
-                        return {
-                            parse: 0,
-                            url: _result.url,
-                            header: _result.headers
+            parses = shuffleArray(parses); // 随机打乱顺序
+            let successCount = Number(cfg.default.drpyS.parse_count) || 6;
+            let parse_timeout = Number(cfg.default.drpyS.parse_timeout) || 5000;
+            console.log(`待并发的json解析数量: ${parses.length}`);
+            let realUrls = [];
+            const tasks = parses.map((jxObj, index) => {
+                let task_id = jxObj.url + input;
+                return {
+                    func: async function parseTask({jxObj, task_id}) {
+                        let json = await request(task_id, {timeout: parse_timeout}); // 解析5秒超时
+                        let _url = jsonpath.query(json, '$.url');
+                        if (Array.isArray(_url)) {
+                            _url = _url[0];
                         }
-                    } catch (e) {
-                        console.log(`hipy嗅探器嗅探错误: ${e.message}`);
+                        console.log('_url:', _url);
+                        if (!json.code || json.code === 200 || ![-1, 404, 403].includes(json.code)) {
+                            if (_url) {
+                                let lastIndex = _url.lastIndexOf('/');
+                                let lastLength = _url.slice(lastIndex + 1).length;
+                                // console.log('lastLength:', lastLength);
+                                if (lastLength > 10) {
+                                    // console.log(`code:${json.code} , url:${json.url}`);
+                                    return {...json, ...{name: jxObj.name}}
+                                }
+                            }
+                            throw new Error(`${jxObj.name} 解析 ${input} 失败: ${JSON.stringify(json)}`);
+                        } else {
+                            throw new Error(`${jxObj.name} 解析 ${input} 失败`);
+                        }
+                    },
+                    param: {jxObj, task_id},
+                    id: task_id
+                }
+            });
+            const listener = {
+                func: (param, id, error, result) => {
+                    if (error) {
+                        console.error(`Task ${id} failed with error: ${error.message}`);
+                    } else if (result) {
+                        // log(`Task ${id} succeeded with result: `, result);
+                        realUrls.push({original: id, ...result});
                     }
+                    // 中断逻辑示例
+                    if (param.stopOnFirst && result && result.url) {
+                        return 'break';
+                    }
+                },
+                param: {stopOnFirst: false},
+            }
+            await batchExecute(tasks, listener, successCount, 16);
+            // console.log(realUrls);
+            const playUrls = [];
+            realUrls.forEach((item) => {
+                playUrls.push(item.name, item.url);
+            });
+            return {
+                parse: 0,
+                url: playUrls,
+                // header: headers
+            }
 
-                } else {
-                    const sniffer = await _inReq.server.messageToDart({
-                        action: 'sniff',
-                        opt: {
-                            url: realUrl,
-                            timeout: 10000,
-                            rule: sniffer_rule,
-                        },
-                    });
-                    if (sniffer && sniffer.url) {
-                        const hds = {};
-                        if (sniffer.headers) {
-                            if (sniffer.headers['user-agent']) {
-                                hds['User-Agent'] = sniffer.headers['user-agent'];
-                            }
-                            if (sniffer.headers['referer']) {
-                                hds['Referer'] = sniffer.headers['referer'];
-                            }
-                            if (sniffer.headers['cookie']) {
-                                hds['Cookie'] = sniffer.headers['cookie'];
-                            }
+        } else if (result && result.parse && result.url) {
+            const input = result.url;
+            if (input && input.startsWith('http')) { // lazy返回结果是url http开头才走嗅探和免嗅逻辑
+                const sniffer_rule = cfg.default.drpyS.sniffer_rule || 'http((?!http).){12,}?\\.m3u8(?!\\?)';
+                const regex = new RegExp(sniffer_rule);
+                if (regex.test(input)) {
+                    result.parse = 0;
+                } else if (!regex.test(input)) {
+                    if (cfg.default.drpyS.enable_hipy_sniffer && cfg.default.drpyS.hipy_sniffer_url) {
+                        const _js = result.js;
+                        const _parse_extra = result.parse_extra;
+                        const _query = {
+                            url: input,
+                            script: _js ? base64Encode(_js) : undefined,
                         }
-                        return {
-                            parse: 0,
-                            url: sniffer.url,
-                            header: hds,
-                        };
+                        let _url = mergeQuery(cfg.default.drpyS.hipy_sniffer_url, _query);
+                        if (_parse_extra) {
+                            _url += _parse_extra;
+                        }
+                        try {
+                            let _result = await request(_url);
+                            console.log(`hipy嗅探器任务执行${_url} 完毕: ${_result.url}`);
+                            return {
+                                parse: 0,
+                                url: _result.url,
+                                header: _result.headers
+                            }
+                        } catch (e) {
+                            console.log(`hipy嗅探器嗅探错误: ${e.message}`);
+                        }
+
+                    } else {
+                        const sniffer = await _inReq.server.messageToDart({
+                            action: 'sniff',
+                            opt: {
+                                url: input,
+                                timeout: 10000,
+                                rule: sniffer_rule,
+                            },
+                        });
+                        if (sniffer && sniffer.url) {
+                            const hds = {};
+                            if (sniffer.headers) {
+                                if (sniffer.headers['user-agent']) {
+                                    hds['User-Agent'] = sniffer.headers['user-agent'];
+                                }
+                                if (sniffer.headers['referer']) {
+                                    hds['Referer'] = sniffer.headers['referer'];
+                                }
+                                if (sniffer.headers['cookie']) {
+                                    hds['Cookie'] = sniffer.headers['cookie'];
+                                }
+                            }
+                            return {
+                                parse: 0,
+                                url: sniffer.url,
+                                header: hds,
+                            };
+                        }
                     }
                 }
             }

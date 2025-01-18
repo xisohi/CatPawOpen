@@ -47,7 +47,7 @@ export default async function router(fastify) {
             try {
 
                 drpyS_data = await request(drpyS_config_url);
-                if (drpyS_data.sites_count && drpyS_data.homepage === 'https://github.com/hjdhnx/drpy-node') {
+                if (drpyS_data.homepage && drpyS_data.homepage.startsWith('https://github.com/hjdhnx')) {
                     let drpyS_sites = drpyS_data.sites.filter(site => site.type === 4);
 
                     // console.log(drpyS_sites);

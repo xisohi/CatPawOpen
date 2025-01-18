@@ -1,12 +1,15 @@
 export default {
     drpyS: {
-        config_url: 'http://localhost:5757/config/1?sub=all&pwd=',
+        config_url: 'http://localhost:5757/config/1?sub=all&pwd=', // 本地ds 支持
+        // config_url: 'http://localhost:5707/config/0?sub=dzyyds', // 本地hipy-t4 支持
         home_site: 'http://localhost:5757/api/设置中心',
         enable_dspush: 1,
         enable_home_site: 0,
         sniffer_rule: 'http((?!http).){12,}?\\.(m3u8|mp4|flv|avi|mkv|rm|wmv|mpg|m4a|mp3)\\?.*|http((?!http).){12,}\\.(m3u8|mp4|flv|avi|mkv|rm|wmv|mpg|m4a|mp3)|http((?!http).)*?video/tos*|http((?!http).)*?obj/tos*',
         enable_hipy_sniffer: 0,
         hipy_sniffer_url: 'http://127.0.0.1:5708/sniffer?url=',
+        parse_count: 6, // 最多显示多少条解析
+        parse_timeout: 5000, // 解析超时毫秒数
     },
     ffm3u8: {
         url: 'https://cj.ffzyapi.com/api.php/provide/vod/from/ffm3u8',
