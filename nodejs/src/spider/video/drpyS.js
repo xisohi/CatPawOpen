@@ -257,32 +257,57 @@ async function play(_inReq, _outResp) {
             if (realUrl && regex.test(realUrl)) {
                 result.parse = 0;
             } else if (realUrl && !regex.test(realUrl)) {
-                const sniffer = await inReq.server.messageToDart({
-                    action: 'sniff',
-                    opt: {
+                if (cfg.default.drpyS.enable_hipy_sniffer && cfg.default.drpyS.hipy_sniffer_url) {
+                    const _js = result.js;
+                    const _parse_extra = result.parse_extra;
+                    const _query = {
                         url: realUrl,
-                        timeout: 10000,
-                        rule: sniffer_rule,
-                    },
-                });
-                if (sniffer && sniffer.url) {
-                    const hds = {};
-                    if (sniffer.headers) {
-                        if (sniffer.headers['user-agent']) {
-                            hds['User-Agent'] = sniffer.headers['user-agent'];
-                        }
-                        if (sniffer.headers['referer']) {
-                            hds['Referer'] = sniffer.headers['referer'];
-                        }
-                        if (sniffer.headers['cookie']) {
-                            hds['Cookie'] = sniffer.headers['cookie'];
-                        }
+                        script: _js ? base64Encode(_js) : undefined,
                     }
-                    return {
-                        parse: 0,
-                        url: sniffer.url,
-                        header: hds,
-                    };
+                    let _url = mergeQuery(cfg.default.drpyS.hipy_sniffer_url, _query);
+                    if (_parse_extra) {
+                        _url += _parse_extra;
+                    }
+                    try {
+                        let _result = await request(_url);
+                        console.log(`hipy嗅探器任务执行${_url} 完毕: ${_result.url}`);
+                        return {
+                            parse: 0,
+                            url: _result.url,
+                            header: _result.headers
+                        }
+                    } catch (e) {
+                        console.log(`hipy嗅探器嗅探错误: ${e.message}`);
+                    }
+
+                } else {
+                    const sniffer = await _inReq.server.messageToDart({
+                        action: 'sniff',
+                        opt: {
+                            url: realUrl,
+                            timeout: 10000,
+                            rule: sniffer_rule,
+                        },
+                    });
+                    if (sniffer && sniffer.url) {
+                        const hds = {};
+                        if (sniffer.headers) {
+                            if (sniffer.headers['user-agent']) {
+                                hds['User-Agent'] = sniffer.headers['user-agent'];
+                            }
+                            if (sniffer.headers['referer']) {
+                                hds['Referer'] = sniffer.headers['referer'];
+                            }
+                            if (sniffer.headers['cookie']) {
+                                hds['Cookie'] = sniffer.headers['cookie'];
+                            }
+                        }
+                        return {
+                            parse: 0,
+                            url: sniffer.url,
+                            header: hds,
+                        };
+                    }
                 }
             }
         }

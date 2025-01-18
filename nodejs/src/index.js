@@ -2,6 +2,7 @@ import fastify from 'fastify';
 import router from './router.js';
 import {JsonDB, Config} from 'node-json-db';
 import axios from 'axios';
+import {findAvailablePort} from './util/tool.js';
 
 let server = null;
 
@@ -58,8 +59,11 @@ export async function start(config) {
     // 推荐使用NODE_PATH做db存储的更目录，这个目录在应用中清除缓存时会被清空
     server.db = new JsonDB(new Config((process.env['NODE_PATH'] || '.') + '/db.json', true, true, '/', true));
     server.register(router);
+    const startPort = process.env['DEV_HTTP_PORT'] || 5758;
+    const availablePort = await findAvailablePort(startPort);
     // 注意 一定要监听ipv4地址 build后 app中使用时 端口使用0让系统自动分配可用端口
-    server.listen({port: process.env['DEV_HTTP_PORT'] || 0, host: '::'});
+    // server.listen({port: process.env['DEV_HTTP_PORT'] || 0, host: '::'});
+    server.listen({port: availablePort, host: '::'});
 }
 
 /**

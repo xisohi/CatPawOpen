@@ -1,3 +1,28 @@
+import net from 'net';
+
+// 检查端口是否被占用
+function checkPort(port) {
+    return new Promise((resolve) => {
+        const server = net.createServer();
+        server.once('error', () => {
+            resolve(false); // 端口被占用
+        });
+        server.once('listening', () => {
+            server.close(() => resolve(true)); // 端口可用
+        });
+        server.listen(port);
+    });
+}
+
+// 查找可用端口
+export async function findAvailablePort(startPort) {
+    let port = Number(startPort);
+    while (!(await checkPort(port))) {
+        port += 1; // 递增端口
+    }
+    return port;
+}
+
 export function extractTags(filename) {
     // 正则匹配方括号内的内容
     const regex = /\[(.*?)\]/g;

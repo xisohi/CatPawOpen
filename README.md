@@ -46,3 +46,29 @@ yarn build
 ### 20250118
 
 1. 支持通用嗅探
+
+### hipy嗅探器说明
+
+支持参数如下
+
+```text
+let init_js = `Object.defineProperties(navigator, {platform: {get: () => 'iPhone'}});`;
+input = {
+    parse: 1,
+    url: input,
+    js: `try{location.href = document.querySelectorAll("iframe")[1].src;}catch(err) {}document.querySelector(".line").click()`,
+    parse_extra: '&init_script=' + encodeURIComponent(base64Encode(init_js)),
+}
+```
+
+* script 嗅探过程中需要执行的点击操作，传递值为base64编码后的js脚本
+
+parse_extra 额外的自定义query字符串如下
+
+* is_pc
+* css
+* init_script base64编码的初始化执行脚本
+* headers 嗅探请求头
+* timeout 嗅探超时
+* custom_regex 自定义嗅探规则正则
+* sniffer_exclude 嗅探排除规则正则
