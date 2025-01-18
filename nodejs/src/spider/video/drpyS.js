@@ -28,6 +28,10 @@ function getSiteUrl(skeyHash) {
     return url
 }
 
+function getPushApi() {
+    return getSiteUrl(md5('push'));
+}
+
 function updateSiteMap(sites) {
     sites.forEach((site) => {
         let skeyHash = md5(site.key);
@@ -137,6 +141,20 @@ async function detail(_inReq, _outResp) {
     let url = getSiteUrl(skeyHash);
     const ids = !Array.isArray(_inReq.body.id) ? [_inReq.body.id] : _inReq.body.id;
 
+    // 一级或者搜索过滤的push直接拦截，可以避免走自身detail（虽然后面自身detail数据逻辑已经可用了，但是为了少走一次，加快速率，这样加很棒）
+    if (ids[0].startsWith('push://')) {
+        let _ids = ids[0].slice(7);
+        let _url = getPushApi();
+        console.log('detail push _ids:', _ids);
+        console.log('detail push _url:', _url);
+        let _data = {ac: 'detail', ids: _ids};
+        let _result = await post(_url, _data);
+        if (_result && Array.isArray(_result.list)) {
+            let _vod_play_url = _result.list[0].vod_play_url;
+            _result.list[0].vod_play_url = _vod_play_url.split('#').map(i => i.replace('$', '$push://')).join('#');
+        }
+        return _result
+    }
     const query = {ac: 'detail', ids: ids.join(',')};
     url = mergeQuery(url, query);
     const result = await request(url);
@@ -144,32 +162,34 @@ async function detail(_inReq, _outResp) {
     // const result = await post(url, data);
     if (result.list && Array.isArray(result.list)) {
         const vod_play_url = result.list[0].vod_play_url;
+        const vod_play_from = result.list[0].vod_play_from;
         // 手动处理push:// 调用push_agent
         if (vod_play_url && vod_play_url.includes('push://')) {
             console.log('vod_play_url:', vod_play_url);
             let vod_play_urls = [];
-            let vod_play_froms = result.list[0].vod_play_from.split('$$$');
+            let vod_play_froms = vod_play_from.split('$$$');
             let vod_play_arr = vod_play_url.split('$$$');
+            console.log(vod_play_arr);
             for (let i in vod_play_arr) {
-                const play_url = vod_play_url[i];
+                const play_url = vod_play_arr[i];
+                console.log('play_url:', play_url);
                 if (play_url.includes('push://')) {
                     const tab_urls = play_url.split('#');
+                    console.log('tab_urls:', tab_urls);
                     let _vod_play_urls = [];
                     for (const tab_url of tab_urls) {
                         let _title = tab_url.split('$')[0];
                         let vod_url = tab_url.split('$')[1];
                         if (vod_url && vod_url.startsWith('push://')) {
                             let _ids = vod_url.slice(7);
-                            let _url = getSiteUrl(md5('push_agent'));
-
-
-                            // let _data = {ac: 'detail', ids: _ids};
-                            // let _result = await post(_url, _data);
-
-                            const _query = {ac: 'detail', ids: _ids};
-                            _url = mergeQuery(_url, _query);
-                            const _result = await request(_url);
-
+                            let _url = getPushApi();
+                            console.log('tab push _ids:', _ids);
+                            console.log('tab push _url:', _url);
+                            let _data = {ac: 'detail', ids: _ids};
+                            let _result = await post(_url, _data);
+                            // const _query = {ac: 'detail', ids: _ids};
+                            // _url = mergeQuery(_url, _query);
+                            // const _result = await request(_url);
                             if (_result && Array.isArray(_result.list)) {
                                 let _vod_play_url = _result.list[0].vod_play_url;
                                 vod_play_froms[i] = _result.list[0].vod_play_from;
@@ -213,10 +233,10 @@ async function play(_inReq, _outResp) {
     let url = getSiteUrl(skeyHash);
     let id = _inReq.body.id;
     if (id && id.startsWith('push://')) {
-        url = getSiteUrl(md5('push_agent'));
+        url = getPushApi();
         id = id.slice(7);
+        console.log('[play] push:', id);
     }
-
     const flag = _inReq.body.flag;
     const flags = _inReq.body.flags;
     const query = {play: `${id}`, flag: flag};
