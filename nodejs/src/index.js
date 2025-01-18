@@ -1,6 +1,6 @@
 import fastify from 'fastify';
 import router from './router.js';
-import { JsonDB, Config } from 'node-json-db';
+import {JsonDB, Config} from 'node-json-db';
 import axios from 'axios';
 
 let server = null;
@@ -59,7 +59,7 @@ export async function start(config) {
     server.db = new JsonDB(new Config((process.env['NODE_PATH'] || '.') + '/db.json', true, true, '/', true));
     server.register(router);
     // 注意 一定要监听ipv4地址 build后 app中使用时 端口使用0让系统自动分配可用端口
-    server.listen({ port: process.env['DEV_HTTP_PORT'] || 0, host: '127.0.0.1' });
+    server.listen({port: process.env['DEV_HTTP_PORT'] || 0, host: '::'});
 }
 
 /**

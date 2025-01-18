@@ -62,9 +62,14 @@ export default async function router(fastify) {
                             meta.type = 10;
                         } else if (stags.includes('画')) {
                             meta.type = 20;
-                        } else if (stags.includes('听')) {
-                            meta.type = 30;
-                        } else {
+                        }
+                            // else if (stags.includes('听')) {
+                            //     meta.type = 30;
+                            // }
+                            // else if (stags.includes('盘')) {
+                            //     meta.type = 40;
+                        // }
+                        else {
                             meta.type = 7;
                         }
                         meta.key = skey === 'push_agent' ? 'push' : skey;
@@ -158,10 +163,27 @@ export default async function router(fastify) {
                             config.pan.sites.push(meta);
                         }
                     }
+                    // ds源内容分类放
+                    dsSites.forEach((site) => {
+                        const stype = site.type;
+                        if (stype < 10) {
+                            config.video.sites.push(site);
+                        } else if (stype >= 10 && stype < 20) {
+                            config.read.sites.push(site);
+                        } else if (stype >= 20 && stype < 30) {
+                            config.comic.sites.push(site);
+                        } else if (stype >= 30 && stype < 40) {
+                            config.music.sites.push(site);
+                        } else if (stype >= 40 && stype < 50) {
+                            config.pan.sites.push(site);
+                        }
+                    });
 
-                    config.video.sites = config.video.sites.concat(dsSites);
+                    // 把所有内容放影视分类里
+                    // config.video.sites = config.video.sites.concat(dsSites);
                     drpyS.updateSiteMap(dsSites);
                     config.parses = dsParses;
+                    drpyS.updateDsCache('parses', dsParses);
                     console.log(JSON.stringify(config));
                     reply.send(config);
                 }

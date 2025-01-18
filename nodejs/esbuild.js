@@ -1,6 +1,6 @@
 import * as esbuild from 'esbuild';
 import fs from 'fs';
-import { createHash } from 'crypto';
+import {createHash} from 'crypto';
 
 esbuild.build({
     entryPoints: ['src/index.js'],
@@ -11,7 +11,7 @@ esbuild.build({
     format: 'cjs',
     platform: 'node',
     target: 'node18',
-    sourcemap: process.env.NODE_ENV === 'development' ? 'inline' : false,
+    sourcemap: process.env.NODE_ENV === 'development',
     plugins: [genMd5()],
 });
 
