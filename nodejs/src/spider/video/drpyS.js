@@ -248,7 +248,7 @@ async function play(_inReq, _outResp) {
     if (stags.includes('书')) {
         let bookJson = JSON.parse(result.url.replace('novel://', ''));
         book.title = bookJson.title;
-        book.content = book.title + '\n' + bookJson.content;
+        book.content = book.title + '\n\n' + bookJson.content;
         book.header = result.header;
         result = book;
     }
