@@ -13,6 +13,7 @@ const spiderPrefix = '/spider';
 let dsSites = [];
 let dsParses = [];
 let drpyS_data = {};
+let drpyS_error = null;
 
 /**
  * A function to initialize the router.
@@ -89,7 +90,8 @@ export default async function router(fastify) {
                     });
                 }
             } catch (e) {
-                console.log(`加载配置发生了错误: ${e.message}`)
+                drpyS_error = e.message;
+                console.log(`加载配置发生了错误: ${drpyS_error}`)
             }
         }
     }
@@ -183,6 +185,7 @@ export default async function router(fastify) {
                     // config.video.sites = config.video.sites.concat(dsSites);
                     drpyS.updateSiteMap(dsSites);
                     config.parses = dsParses;
+                    config.drpyS_error = drpyS_error;
                     drpyS.updateDsCache('parses', dsParses);
                     console.log(JSON.stringify(config));
                     reply.send(config);

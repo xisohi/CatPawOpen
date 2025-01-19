@@ -246,7 +246,9 @@ async function play(_inReq, _outResp) {
     let book = {};
     let referer = '';
     if (stags.includes('书')) {
-        book.content = JSON.parse(result.url.replace('novel://', '')).content;
+        let bookJson = JSON.parse(result.url.replace('novel://', ''));
+        book.title = bookJson.title;
+        book.content = book.title + '\n' + bookJson.content;
         book.header = result.header;
         result = book;
     }
