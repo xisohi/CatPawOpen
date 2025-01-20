@@ -81,8 +81,9 @@ async function home(_inReq, _outResp) {
     const skeyHash = md5(prefix.slice(prefix.lastIndexOf('/') + 1));
     let url = getSiteUrl(skeyHash);
     const result = await request(url);
+    // console.log('result:',result)
     const site = sitesCache.get(skeyHash);
-    if (result.list.length > 0 && Array.isArray(result['class'])) {
+    if (result.list && result.list.length > 0 && Array.isArray(result['class'])) {
         site['home_videos'] = result.list;
         result['class'].unshift({"type_name": "推荐", "type_id": "dsHome"},)
     }

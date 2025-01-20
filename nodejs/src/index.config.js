@@ -28,7 +28,8 @@ export default {
     color: [
         {
             light: {
-                bg: 'https://i2.100024.xyz/2024/01/13/pptcej.webp',
+                // bg: 'https://i2.100024.xyz/2024/01/13/pptcej.webp',
+                bg: 'http://php.540734621.xyz/tcp/1.php',
                 bgMask: '0x50ffffff',
                 primary: '0xff446732',
                 onPrimary: '0xffffffff',
@@ -62,7 +63,7 @@ export default {
                 surfaceTint: '0xff446732',
             },
             dark: {
-                bg: 'https://i2.100024.xyz/2024/01/13/pptg3z.webp',
+                bg: 'http://php.540734621.xyz/tcp/1.php',
                 bgMask: '0x50000000',
                 primary: '0xffaad291',
                 onPrimary: '0xff173807',
@@ -98,7 +99,7 @@ export default {
         },
         {
             light: {
-                bg: 'https://i2.100024.xyz/2024/01/13/pi2rpw.webp',
+                bg: 'http://php.540734621.xyz/tcp/1.php',
                 bgMask: '0x50ffffff',
                 primary: '0xff666014',
                 onPrimary: '0xffffffff',
@@ -132,7 +133,7 @@ export default {
                 surfaceTint: '0xff666014',
             },
             dark: {
-                bg: 'https://i2.100024.xyz/2024/01/13/pi2reo.webp',
+                bg: 'http://php.540734621.xyz/tcp/1.php',
                 bgMask: '0x50000000',
                 primary: '0xffd1c973',
                 onPrimary: '0xff353100',
@@ -168,7 +169,7 @@ export default {
         },
         {
             light: {
-                bg: 'https://i2.100024.xyz/2024/01/13/qrnuwt.webp',
+                bg: 'http://php.540734621.xyz/tcp/1.php',
                 bgMask: '0x50ffffff',
                 primary: '0xFF2B6C00',
                 onPrimary: '0xFFFFFFFF',
@@ -202,7 +203,7 @@ export default {
                 surfaceTint: '0xFF2B6C00',
             },
             dark: {
-                bg: 'https://i2.100024.xyz/2024/01/13/qrc37o.webp',
+                bg: 'http://php.540734621.xyz/tcp/1.php',
                 bgMask: '0x50000000',
                 primary: '0xFF8CDA60',
                 onPrimary: '0xFF133800',
