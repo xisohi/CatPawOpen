@@ -113,7 +113,8 @@ async function category(_inReq, _outResp) {
         ext = base64Encode(JSON.stringify(filters));
     }
     const query = {
-        ac: 'list',
+        // ac: 'list',
+        ac: 'detail', // 适配不夜t4
         t: tid,
         pg: pg,
         ext: ext,
@@ -149,7 +150,13 @@ async function detail(_inReq, _outResp) {
         console.log('detail push _ids:', _ids);
         console.log('detail push _url:', _url);
         let _data = {ac: 'detail', ids: _ids};
-        let _result = await post(_url, _data);
+        let _result;
+        if (/platform=ysc/.test(_url)) { // 不夜get
+            url = mergeQuery(url, _data);
+            _result = await request(url);
+        } else {
+            _result = await post(_url, _data);
+        }
         if (_result && Array.isArray(_result.list)) {
             let _vod_play_url = _result.list[0].vod_play_url;
             _result.list[0].vod_play_url = _vod_play_url.split('#').map(i => i.replace('$', '$push://')).join('#');
@@ -187,7 +194,13 @@ async function detail(_inReq, _outResp) {
                             console.log('tab push _ids:', _ids);
                             console.log('tab push _url:', _url);
                             let _data = {ac: 'detail', ids: _ids};
-                            let _result = await post(_url, _data);
+                            let _result;
+                            if (/platform=ysc/.test(_url)) { // 不夜get
+                                url = mergeQuery(url, _data);
+                                _result = await request(url);
+                            } else {
+                                _result = await post(_url, _data);
+                            }
                             // const _query = {ac: 'detail', ids: _ids};
                             // _url = mergeQuery(_url, _query);
                             // const _result = await request(_url);
