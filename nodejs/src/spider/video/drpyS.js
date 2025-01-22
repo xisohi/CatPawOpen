@@ -83,6 +83,19 @@ async function home(_inReq, _outResp) {
     const result = await request(url);
     // console.log('result:',result)
     const site = sitesCache.get(skeyHash);
+    if (/platform=ysc/.test(url)) { // 处理不夜不讲规则的筛选
+        if (result.filters && typeof result.filters === 'object' && Object.keys(result.filters).length > 0) {
+            let new_filters = {};
+            Object.keys(result.filters).forEach((key) => {
+                if (result.filters[key] && !Array.isArray(result.filters[key])) {
+                    new_filters[key] = [result.filters[key]]
+                } else {
+                    new_filters[key] = result.filters[key]
+                }
+            });
+            result.filters = new_filters;
+        }
+    }
     if (result.list && result.list.length > 0 && Array.isArray(result['class'])) {
         site['home_videos'] = result.list;
         result['class'].unshift({"type_name": "推荐", "type_id": "dsHome"},)
@@ -241,6 +254,8 @@ async function detail(_inReq, _outResp) {
 
 async function play(_inReq, _outResp) {
     const prefix = _inReq.server.prefix;
+    let localProxyApi = _inReq.server.address().url.replace(':::', '127.0.0.1:') + '/proxy';
+    // console.log('localProxyApi:', localProxyApi);
     const skey = prefix.slice(prefix.lastIndexOf('/') + 1);
     const stags = extractTags(skey);
     const skeyHash = md5(skey);
@@ -412,6 +427,11 @@ async function play(_inReq, _outResp) {
                 }
             }
         }
+    }
+    if (result.url && typeof result.url === 'string' && result.url.includes('http://127.0.0.1:5575/')) {
+        result.url = result.url.replaceAll('http://127.0.0.1:5575/proxy', localProxyApi);
+    } else if (result.url && Array.isArray(result.url) && result.url.find(x => x.startsWith('http://127.0.0.1:5575/'))) {
+        result.url = JSON.parse(JSON.stringify(result.url).replaceAll('http://127.0.0.1:5575/proxy', localProxyApi));
     }
 
     return result;

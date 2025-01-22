@@ -1,8 +1,8 @@
 {
     "name": "cat_vod_nodejs_fastify",
-    "version": "1.0.1",
-    "description": "CatVodOpen nodejs config api server demo.",
+    "version": "1.0.2",
     "type": "module",
+    "main": "src/dev.js",
     "scripts": {
         "dev": "cross-env DEV_HTTP_PORT=5758 nodemon --config nodemon.json src/dev.js",
         "_build": "rimraf dist && node esbuild.js && node esbuild-config.js",
@@ -15,7 +15,13 @@
         "build:rollup:config(obsolete)": "cross-env NODE_ENV=production node rollup-config.js",
         "build-old:dbg:copy": "rimraf dist && cross-env NODE_ENV=development node esbuild.js && cross-env NODE_ENV=development node esbuild-config.js && node copyDist.js D:\\soft\\猫影视\\Release\\data\\flutter_assets\\asset\\js"
     },
+    "engines": {
+        "node": ">17 <23"
+    },
+    "repository": "https://github.com/hjdhnx/CatPawOpen/tree/ds-cat",
     "author": "道长",
+    "description": "道长修仙，法力无边。一统江湖，只需半年。\n君子袒蛋蛋，小人藏鸡鸡。",
+    "license": "MIT",
     "devDependencies": {
         "@babel/plugin-transform-runtime": "^7.23.9",
         "@babel/preset-env": "^7.23.9",

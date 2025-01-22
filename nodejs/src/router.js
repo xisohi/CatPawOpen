@@ -7,6 +7,8 @@ import ffm3u8 from './spider/video/ffm3u8.js';
 import drpyS from './spider/video/drpyS.js';
 import {request} from "./util/request.js";
 import {extractTags} from "./util/tool.js";
+import {md5} from "./util/crypto-util.js";
+import chunkStream from "./util/chunk.js";
 
 const spiders = [ffm3u8, push, alist, _13bqg, copymanga, drpyS];
 const spiderPrefix = '/spider';
@@ -187,10 +189,87 @@ export default async function router(fastify) {
                     config.parses = dsParses;
                     config.drpyS_error = drpyS_error;
                     drpyS.updateDsCache('parses', dsParses);
-                    console.log(JSON.stringify(config));
+                    // console.log(JSON.stringify(config));
+                    console.log(`共计加载了 ${config.video.sites.length} 个视频源,其他源暂不统计，正常加载完毕`);
                     reply.send(config);
                 }
             );
+
+            fastify.all('/proxy', async (request, reply) => {
+                try {
+                    const {thread, chunkSize, url, header} = request.query;
+
+                    if (!url) {
+                        reply.code(400).send({error: 'url is required'});
+                        return;
+                    }
+
+                    // 解码 URL 和 Header
+                    const decodedUrl = decodeURIComponent(url);
+                    const decodedHeader = header ? JSON.parse(decodeURIComponent(header)) : {};
+
+                    // 获取当前请求头
+                    const currentHeaders = request.headers;
+
+                    // 解析目标 URL
+                    const targetUrl = new URL(decodedUrl);
+
+                    // 更新特殊头部
+                    const proxyHeaders = {
+                        ...currentHeaders,
+                        ...decodedHeader,
+                        host: targetUrl.host, // 确保 Host 对应目标网站
+                        origin: `${targetUrl.protocol}//${targetUrl.host}`, // Origin
+                        referer: targetUrl.href, // Referer
+                    };
+
+                    // 删除本地无关头部
+                    delete proxyHeaders['content-length']; // 避免因修改内容导致不匹配
+                    delete proxyHeaders['transfer-encoding'];
+
+                    // 添加缺省值或更新
+                    proxyHeaders['user-agent'] =
+                        proxyHeaders['user-agent'] ||
+                        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36';
+                    proxyHeaders['accept'] = proxyHeaders['accept'] || '*/*';
+                    proxyHeaders['accept-language'] = proxyHeaders['accept-language'] || 'en-US,en;q=0.9';
+                    proxyHeaders['accept-encoding'] = proxyHeaders['accept-encoding'] || 'gzip, deflate, br';
+
+
+                    // delete proxyHeaders['host'];
+                    // delete proxyHeaders['origin'];
+                    // delete proxyHeaders['referer'];
+                    // delete proxyHeaders['cookie'];
+                    // delete proxyHeaders['accept'];
+
+                    delete proxyHeaders['sec-fetch-site'];
+                    delete proxyHeaders['sec-fetch-mode'];
+                    delete proxyHeaders['sec-fetch-dest'];
+                    delete proxyHeaders['sec-ch-ua'];
+                    delete proxyHeaders['sec-ch-ua-mobile'];
+                    delete proxyHeaders['sec-ch-ua-platform'];
+                    // delete proxyHeaders['connection'];
+                    // delete proxyHeaders['user-agent'];
+                    delete proxyHeaders['range']; // 必须删除，后面chunkStream会从request取出来的
+                    // console.log(`proxyHeaders:`, proxyHeaders);
+
+                    // 处理选项
+                    const option = {
+                        chunkSize: chunkSize ? 1024 * parseInt(chunkSize, 10) : 1024 * 256,
+                        poolSize: thread ? parseInt(thread, 10) : 5,
+                        timeout: 1000 * 10, // 默认 10 秒超时
+                    };
+
+                    // console.log(`option:`, option);
+                    // 计算 urlKey (MD5)
+                    const urlKey = md5(decodedUrl);
+
+                    // 调用 chunkStream
+                    return await chunkStream(request, reply, decodedUrl, urlKey, proxyHeaders, option);
+                } catch (err) {
+                    reply.code(500).send({error: err.message});
+                }
+            });
         }
     );
 }

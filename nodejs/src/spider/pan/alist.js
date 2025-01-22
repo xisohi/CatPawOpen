@@ -1,4 +1,7 @@
 import req from '../../util/req.js';
+import CryptoJS from 'crypto-js';
+
+const suffix = '-https://github.com/alist-org/alist'
 
 const http = async function (url, options = {}) {
     if (options.method == 'POST' && options.data) {
@@ -44,6 +47,7 @@ async function get_drives(name) {
             settings.enableSearch = false; //v3 没有找到 搜索配置
         }
         //不同版本 接口不一样
+        api.login = settings.v3 ? '/api/auth/login/hash' : '/api/auth/login/hash';
         api.path = settings.v3 ? '/api/fs/list' : '/api/public/path';
         api.file = settings.v3 ? '/api/fs/get' : '/api/public/path';
         api.search = settings.v3 ? '/api/public/search' : '/api/public/search';
@@ -55,82 +59,102 @@ async function get_drives(name) {
 async function init(inReq, _outResp) {
     inReq.server.config.alist.forEach(
         (item) =>
-            (__drives[item.name] = {
-                name: item.name,
-                server: item.server.endsWith('/') ? item.server.substring(0, item.server.length - 1) : item.server,
-                startPage: item.startPage || '/', //首页
-                showAll: item.showAll === true, //默认只显示 视频和文件夹，如果想显示全部 showAll 设置true
-                params: item.params || {},
-                _path_param: item.params
-                    ? Object.keys(item.params).sort(function (x, y) {
-                          return y.length - x.length;
-                      })
-                    : [],
-                settings: {},
-                api: {},
-                getParams(path) {
-                    const key = this._path_param.find((x) => path.startsWith(x));
-                    return Object.assign({}, this.params[key], { path });
-                },
-                async getPath(path) {
-                    const res = (await http.post(this.server + this.api.path, { data: this.getParams(path) })).json();
-                    return this.settings.v3 ? res.data.content : res.data.files;
-                },
-                async getFile(path) {
-                    const res = (await http.post(this.server + this.api.file, { data: this.getParams(path) })).json();
-                    const data = this.settings.v3 ? res.data : res.data.files[0];
-                    if (!this.settings.v3) data.raw_url = data.url; //v2 的url和v3不一样
-                    return data;
-                },
-                async getOther(method, path) {
-                    const data = this.getParams(path);
-                    data.method = method;
-                    const res = (await http.post(this.server + this.api.other, { data: data })).json();
-                    return res;
-                },
-                isFolder(data) {
-                    return data.type == 1;
-                },
-                isVideo(data) {
-                    //判断是否是 视频文件
-                    return this.settings.v3 ? data.type == 2 : data.type == 3;
-                },
-                isSubtitle(data) {
-                    if (data.type == 1) return false;
-                    const ext = ['.srt', '.ass', '.scc', '.stl', '.ttml'];
-                    return ext.some((x) => data.name.endsWith(x));
-                },
-                getType(data) {
-                    const isVideo = this.isVideo(data);
-                    return this.isFolder(data) ? 0 : isVideo ? 10 : 1;
-                },
-                getPic(data) {
-                    let pic = this.settings.v3 ? data.thumb : data.thumbnail;
-                    return pic || (this.isFolder(data) ? 'http://img1.3png.com/281e284a670865a71d91515866552b5f172b.png' : '');
-                },
-                getSize(data) {
-                    let sz = data.size || 0;
-                    if (sz <= 0) return '';
-                    let filesize = '';
-                    if (sz > 1024 * 1024 * 1024 * 1024.0) {
-                        sz /= 1024 * 1024 * 1024 * 1024.0;
-                        filesize = 'TB';
-                    } else if (sz > 1024 * 1024 * 1024.0) {
-                        sz /= 1024 * 1024 * 1024.0;
-                        filesize = 'GB';
-                    } else if (sz > 1024 * 1024.0) {
-                        sz /= 1024 * 1024.0;
-                        filesize = 'MB';
-                    } else {
-                        sz /= 1024.0;
-                        filesize = 'KB';
-                    }
-                    return sz.toFixed(2) + filesize;
-                },
-                getRemark(_data) {
-                    return '';
-                },
-            })
+        (__drives[item.name] = {
+            name: item.name,
+            server: item.server.endsWith('/') ? item.server.substring(0, item.server.length - 1) : item.server,
+            startPage: item.startPage || '/', //首页
+            showAll: item.showAll === true, //默认只显示 视频和文件夹，如果想显示全部 showAll 设置true
+            login: item.login || {},
+            params: item.params || {},
+            _path_param: item.params
+                ? Object.keys(item.params).sort(function (x, y) {
+                    return y.length - x.length;
+                })
+                : [],
+            settings: {},
+            api: {},
+            getLogin() {
+                const pass = CryptoJS.SHA256(this.login.password + suffix).toString(CryptoJS.enc.Hex);
+                const res = {
+                    "username": this.login.username,
+                    "password": pass,
+                    "otp_code": this.login.otp_code
+                }
+                return res;
+            },
+            getParams(path) {
+                const key = this._path_param.find((x) => path.startsWith(x));
+                return Object.assign({}, this.params[key], { path });
+            },
+            async getHeaders() {
+                const res = (await http.post(this.server + this.api.login, { data: this.getLogin() })).json();
+                return { "Authorization": res.data.token };
+            },
+            async getRes(api, path) {
+                let re;
+                if (JSON.stringify(this.login) === "{}") re = (await http.post(this.server + api, { data: this.getParams(path) })).json();
+                else re = (await http.post(this.server + api, { data: this.getParams(path), headers: await this.getHeaders() })).json();
+                return re;
+            },
+            async getPath(path) {
+                const res = await this.getRes(this.api.path, path);
+                return this.settings.v3 ? res.data.content : res.data.files;
+            },
+            async getFile(path) {
+                const res = await this.getRes(this.api.file, path);
+                const data = this.settings.v3 ? res.data : res.data.files[0];
+                if (!this.settings.v3) data.raw_url = data.url; //v2 的url和v3不一样
+                return data;
+            },
+            async getOther(method, path) {
+                const data = this.getParams(path);
+                data.method = method;
+                const res = await this.getRes(this.api.other, path);
+                return res;
+            },
+            isFolder(data) {
+                return data.type == 1;
+            },
+            isVideo(data) {
+                //判断是否是 视频文件
+                return this.settings.v3 ? data.type == 2 : data.type == 3;
+            },
+            isSubtitle(data) {
+                if (data.type == 1) return false;
+                const ext = ['.srt', '.ass', '.scc', '.stl', '.ttml'];
+                return ext.some((x) => data.name.endsWith(x));
+            },
+            getType(data) {
+                const isVideo = this.isVideo(data);
+                return this.isFolder(data) ? 0 : isVideo ? 10 : 1;
+            },
+            getPic(data) {
+                let pic = this.settings.v3 ? data.thumb : data.thumbnail;
+                return pic || (this.isFolder(data) ? 'http://img1.3png.com/281e284a670865a71d91515866552b5f172b.png' : '');
+            },
+            getSize(data) {
+                let sz = data.size || 0;
+                if (sz <= 0) return '';
+                let filesize = '';
+                if (sz > 1024 * 1024 * 1024 * 1024.0) {
+                    sz /= 1024 * 1024 * 1024 * 1024.0;
+                    filesize = 'TB';
+                } else if (sz > 1024 * 1024 * 1024.0) {
+                    sz /= 1024 * 1024 * 1024.0;
+                    filesize = 'GB';
+                } else if (sz > 1024 * 1024.0) {
+                    sz /= 1024 * 1024.0;
+                    filesize = 'MB';
+                } else {
+                    sz /= 1024.0;
+                    filesize = 'KB';
+                }
+                return sz.toFixed(2) + filesize;
+            },
+            getRemark(_data) {
+                return '';
+            },
+        })
     );
     // const deviceKey = inReq.server.prefix + '/device';
     // device = await inReq.server.db.getObjectDefault(deviceKey, {});
@@ -210,7 +234,7 @@ async function file(inReq, _outResp) {
                 let subP = await get_drives_path(sub);
                 const subItem = await drives.getFile(subP.path);
                 subs.push(subItem.raw_url);
-            } catch (error) {}
+            } catch (error) { }
         }
     }
     if ((item.provider === 'AliyundriveShare2Open' || item.provider == 'AliyundriveOpen') && drives.api.other) {
@@ -223,7 +247,7 @@ async function file(inReq, _outResp) {
                     urls.push(live.url);
                 }
             }
-        } catch (error) {}
+        } catch (error) { }
         const result = {
             name: item.name,
             url: urls,
@@ -239,7 +263,7 @@ async function file(inReq, _outResp) {
         let url = item.raw_url;
         try {
             url = (await http.get(url)).json().data.redirect_url;
-        } catch (error) {}
+        } catch (error) { }
         const result = {
             name: item.name,
             url: url,
