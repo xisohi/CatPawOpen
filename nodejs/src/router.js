@@ -205,8 +205,10 @@ export default async function router(fastify) {
                     }
 
                     // 解码 URL 和 Header
-                    const decodedUrl = decodeURIComponent(url);
-                    const decodedHeader = header ? JSON.parse(decodeURIComponent(header)) : {};
+                    // const decodedUrl = decodeURIComponent(url);
+                    const decodedUrl = url;
+                    // const decodedHeader = header ? JSON.parse(decodeURIComponent(header)) : {};
+                    const decodedHeader = header ? JSON.parse(header) : {};
 
                     // 获取当前请求头
                     const currentHeaders = request.headers;
@@ -256,7 +258,7 @@ export default async function router(fastify) {
                     // 处理选项
                     const option = {
                         chunkSize: chunkSize ? 1024 * parseInt(chunkSize, 10) : 1024 * 256,
-                        poolSize: thread ? parseInt(thread, 10) : 5,
+                        poolSize: thread ? parseInt(thread, 10) : 6,
                         timeout: 1000 * 10, // 默认 10 秒超时
                     };
 

@@ -2,3 +2,4 @@
 /nodejs/dist/
 /.idea/
 /nodejs/vod_cache
+/nodejs/yarn.lock
