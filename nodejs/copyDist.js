@@ -39,7 +39,8 @@ const copyFiles = (srcDir, destDir) => {
         if (entry.isDirectory()) {
             // Create directory if it doesn't exist
             if (!fs.existsSync(destPath)) {
-                fs.mkdirSync(destPath);
+                fs.mkdirSync(destPath, { recursive: true });
+                console.log(`Created directory: ${destPath}`);
             }
             // Recursively copy files
             copyFiles(srcPath, destPath);
