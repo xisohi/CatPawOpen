@@ -67,7 +67,7 @@ jobs:
         if: steps.check_commits.outputs.has_new_commits == 'true' || github.event_type == 'repository_dispatch'
         uses: softprops/action-gh-release@v1
         with:
-          files: nodejs/dist  # 指定上传整个 nodejs/dist 文件夹
+          files: nodejs/dist/**  # 指定上传整个 nodejs/dist 文件夹
           tag_name: ${{ env.TAG_NAME }}  # 使用构建时间作为标签
           name: ${{ github.ref_name }} Release  # Release 名称
           body: "Automated release from ${{ github.ref_name }} branch at ${{ env.TAG_NAME }}"  # Release 描述
