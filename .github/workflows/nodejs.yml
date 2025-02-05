@@ -45,46 +45,47 @@ jobs:
           releaseList=$(curl -s "https://api.github.com/repos/${{ matrix.userName }}/${{ matrix.repoName }}/tags")
           if echo "$releaseList" | jq -r '.[] | .commit.sha' | grep -q "$commitSHA"; then
             echo "Latest commit SHA already exists in tags. Exiting workflow."
-            echo "::set-output name=run_steps::false"
+            echo "run_steps=false" >> $GITHUB_ENV
+            exit 0
           else
             echo "New commit detected. Proceeding with further steps..."
-            echo "::set-output name=run_steps::true"
+            echo "run_steps=true" >> $GITHUB_ENV
           fi
 
       - name: Set up Node.js
-        if: steps.check_commit.outputs.run_steps == 'true' || github.event_name == 'workflow_dispatch'
+        if: env.run_steps == 'true' || github.event_name == 'workflow_dispatch'
         uses: actions/setup-node@v3
         with:
           node-version: 18.17.1
 
       - name: Run npm build
-        if: steps.check_commit.outputs.run_steps == 'true' || github.event_name == 'workflow_dispatch'
+        if: env.run_steps == 'true' || github.event_name == 'workflow_dispatch'
         working-directory: nodejs
         run: |
           npm i
           npm run build
 
       - name: Archive dist
-        if: steps.check_commit.outputs.run_steps == 'true' || github.event_name == 'workflow_dispatch'
+        if: env.run_steps == 'true' || github.event_name == 'workflow_dispatch'
         run: |
           cd nodejs/dist
           zip -r cat.zip .  # 打包 nodejs/dist 文件夹内的所有文件
           mv cat.zip ../  # 将生成的 cat.zip 移动到 nodejs 目录下
 
       - name: Upload cat.zip
-        if: steps.check_commit.outputs.run_steps == 'true' || github.event_name == 'workflow_dispatch'
+        if: env.run_steps == 'true' || github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
           name: cat.zip
           path: nodejs/cat.zip  # 指定上传 cat.zip 文件
 
       - name: Set TAG_NAME environment variable
-        if: steps.check_commit.outputs.run_steps == 'true' || github.event_name == 'workflow_dispatch'
+        if: env.run_steps == 'true' || github.event_name == 'workflow_dispatch'
         run: |
           echo "TAG_NAME=$(date -u +'%Y%m%d-%H%M%S')" >> $GITHUB_ENV
 
       - name: Create Release and Upload Artifact
-        if: steps.check_commit.outputs.run_steps == 'true' || github.event_name == 'workflow_dispatch'
+        if: env.run_steps == 'true' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v1
         with:
           files: nodejs/cat.zip  # 指定上传 cat.zip 文件
