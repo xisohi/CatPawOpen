@@ -28,7 +28,7 @@ Windows环境下计算文件md5 命令：certutil -hashfile index.config.js MD5�
 
 <img src="开始菜单快捷方式.png" alt="开始菜单快捷方式" /><img src="桌面快捷方式.png" alt="桌面快捷方式" /><img src="快捷方式.png" alt="快捷方式" />
 
-高级：添加快捷方式{D, 蓝盔影视\蓝盔影视.exe, , , 蓝盔影视,}{P, 蓝盔影视\蓝盔影视.exe, 蓝盔影视, , 蓝盔影视,} 》
+高级：添加快捷方式{P, LKYS\蓝盔影视.exe, 蓝盔影视, , 蓝盔影视, & D, LKYS\蓝盔影视.exe, , , 蓝盔影视, } 》
 
 <img src="文本和图标.png" alt="文本和图标" />
 
