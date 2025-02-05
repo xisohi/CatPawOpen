@@ -6,7 +6,6 @@ on:
   push:  # 用于检测是否有新的提交
     branches:
       - main
-      - ds-cat
     paths:
       - '**'  # 检测所有文件路径
   repository_dispatch:  # 支持手动触发
@@ -57,15 +56,18 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: dist
-          path: |
-            nodejs/dist
+          path: nodejs/dist  # 指定上传整个 nodejs/dist 文件夹
 
       - name: Create Release and Upload Artifact
         if: steps.check_commits.outputs.has_new_commits == 'true' || github.event_type == 'repository_dispatch'
         uses: softprops/action-gh-release@v1
+        env:
+          BUILD_TIME: ${{ github.run_started_at }}
+        run: |
+          echo "BUILD_TIME=${BUILD_TIME}" >> $GITHUB_ENV
         with:
-          files: nodejs/dist/**  # 指定上传的文件路径
-          tag_name: ${{ github.ref_name }}  # 使用分支名作为标签
+          files: nodejs/dist  # 指定上传整个 nodejs/dist 文件夹
+          tag_name: ${{ env.BUILD_TIME }}  # 使用构建时间作为标签
           name: ${{ github.ref_name }} Release  # Release 名称
-          body: "Automated release from ${{ github.ref_name }} branch"  # Release 描述
+          body: "Automated release from ${{ github.ref_name }} branch at ${{ env.BUILD_TIME }}"  # Release 描述
           token: ${{ secrets.GITHUB_TOKEN }}  # 使用 GitHub Token 进行身份验证
