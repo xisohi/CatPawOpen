@@ -3,55 +3,45 @@ name: 猫源
 on:
   schedule:
     - cron: '0 8 * * *'  # 每天8点触发
-  push:  # 用于检测是否有新的提交
-    branches:
-      - main
-    paths:
-      - '**'  # 检测所有文件路径
-  workflow_dispatch:  # 支持手动触发
+  workflow_dispatch:
     inputs:
-      logLevel:
-        description: 'Log level'
-        required: false
-        default: 'info'
-        type: choice
-        options:
-          - info
-          - warning
-          - debug
-      tags:
-        description: 'Test scenario tags'
+      rebuild:
+        description: '忽略构建记录以重新构建'
         required: false
         type: boolean
-      environment:
-        description: 'Environment to run tests against'
+      donotpublish:
+        description: '构建后不提交发布新版'
         required: false
-        type: environment
+        type: boolean
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - userName: xisohi
+            repoName: CatPawOpen
+            branchName: main
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # 获取完整的提交历史，用于后续检查
+          fetch-depth: 0
 
-      - name: Check for new commits
-        id: check_commits
+      - name: Check New Commit
         run: |
-          # 获取当前时间
-          current_time=$(TZ=UTC date +"%Y-%m-%d")
-          # 获取最近一次提交的时间
-          last_commit_time=$(git log -1 --format=%cd --date=iso)
-          # 比较时间，判断是否有新的提交
-          if [[ "$current_time" == "$(TZ=UTC date -d "$last_commit_time" +"%Y-%m-%d")" ]]; then
-            echo "New commits detected. Proceeding with build."
-            echo "::set-output name=has_new_commits::true"
-          else
-            echo "No new commits. Skipping build."
-            echo "::set-output name=has_new_commits::false"
+          upStream="https://github.com/${{  matrix.userName }}/${{ matrix.repoName }}"
+          echo "upStream=$upStream" >> $GITHUB_ENV
+          commit=$(curl -sL "https://api.github.com/repos/${{  matrix.userName }}/${{ matrix.repoName }}/commits/${{ matrix.branchName }}" | jq -r '.sha')
+          if [ $? -ne 0 ]; then
+            echo "Failed to get commit from API"
+            exit 1
+          fi
+          if [ -z "$commit" ] || ! grep -q "$commit" README.md; then
+            echo "commit=$commit" >> $GITHUB_ENV
+            echo "commitS=${commit:0:7}" >> $GITHUB_ENV
           fi
 
       - name: Set up Node.js
