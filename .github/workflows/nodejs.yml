@@ -45,6 +45,7 @@ jobs:
           releaseList=$(curl -s "https://api.github.com/repos/${{ matrix.userName }}/${{ matrix.repoName }}/tags")
           if echo "$releaseList" | jq -r '.[] | .commit.sha' | grep -q "$commitSHA"; then
             echo "Latest commit SHA already exists in tags. Exiting workflow."
+            echo "run_steps=false" >> $GITHUB_ENV
             exit 0
           else
             echo "New commit detected. Proceeding with further steps..."
