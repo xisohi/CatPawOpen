@@ -58,17 +58,17 @@ jobs:
           name: dist
           path: nodejs/dist  # 指定上传整个 nodejs/dist 文件夹
 
-      - name: Set BUILD_TIME environment variable
+      - name: Set TAG_NAME environment variable
         if: steps.check_commits.outputs.has_new_commits == 'true' || github.event_type == 'repository_dispatch'
         run: |
-          echo "BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> $GITHUB_ENV
+          echo "TAG_NAME=$(date -u +'%Y%m%d-%H%M%S')" >> $GITHUB_ENV
 
       - name: Create Release and Upload Artifact
         if: steps.check_commits.outputs.has_new_commits == 'true' || github.event_type == 'repository_dispatch'
         uses: softprops/action-gh-release@v1
         with:
           files: nodejs/dist  # 指定上传整个 nodejs/dist 文件夹
-          tag_name: ${{ env.BUILD_TIME }}  # 使用构建时间作为标签
+          tag_name: ${{ env.TAG_NAME }}  # 使用构建时间作为标签
           name: ${{ github.ref_name }} Release  # Release 名称
-          body: "Automated release from ${{ github.ref_name }} branch at ${{ env.BUILD_TIME }}"  # Release 描述
+          body: "Automated release from ${{ github.ref_name }} branch at ${{ env.TAG_NAME }}"  # Release 描述
           token: ${{ secrets.GITHUB_TOKEN }}  # 使用 GitHub Token 进行身份验证
