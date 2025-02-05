@@ -1,11 +1,10 @@
 // Import required modules
-import fs from 'fs';
-import path from 'path';
-import { execSync } from 'child_process';
+const fs = require('fs');
+const path = require('path');
 
 // Check if the destination path is provided
 if (process.argv.length < 3) {
-    console.error('Usage: node script.js <destination_path>');
+    console.error('Usage: node copyDist.js <destination_path>');
     process.exit(1);
 }
 
