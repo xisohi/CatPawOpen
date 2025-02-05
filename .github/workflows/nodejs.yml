@@ -45,11 +45,10 @@ jobs:
           releaseList=$(curl -s "https://api.github.com/repos/${{ matrix.userName }}/${{ matrix.repoName }}/tags")
           if echo "$releaseList" | jq -r '.[] | .commit.sha' | grep -q "$commitSHA"; then
             echo "Latest commit SHA already exists in tags. Exiting workflow."
-            echo "run_steps=false" >> $GITHUB_ENV
-            exit 0
+            echo "::set-output name=run_steps::false"
           else
             echo "New commit detected. Proceeding with further steps..."
-            echo "run_steps=true" >> $GITHUB_ENV
+            echo "::set-output name=run_steps::true"
           fi
 
       - name: Set up Node.js
