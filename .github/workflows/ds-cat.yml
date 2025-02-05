@@ -1,0 +1,70 @@
+name: ds-cat
+
+on:
+  schedule:
+    - cron: '0 8 * * *'  # 每天8点触发
+  push:  # 用于检测是否有新的提交
+    branches:
+      - ds-cat
+    paths:
+      - '**'  # 检测所有文件路径
+  repository_dispatch:  # 支持手动触发
+    types:
+      - manual_trigger  # 自定义事件类型
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # 获取完整的提交历史，用于后续检查
+
+      - name: Check for new commits
+        id: check_commits
+        run: |
+          # 获取当前时间
+          current_time=$(TZ=UTC date +"%Y-%m-%d")
+          # 获取最近一次提交的时间
+          last_commit_time=$(git log -1 --format=%cd --date=iso)
+          # 比较时间，判断是否有新的提交
+          if [[ "$current_time" == "$(TZ=UTC date -d "$last_commit_time" +"%Y-%m-%d")" ]]; then
+            echo "New commits detected. Proceeding with build."
+            echo "::set-output name=has_new_commits::true"
+          else
+            echo "No new commits. Skipping build."
+            echo "::set-output name=has_new_commits::false"
+          fi
+
+      - name: Set up Node.js
+        if: steps.check_commits.outputs.has_new_commits == 'true' || github.event_type == 'repository_dispatch'
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18.17.1
+
+      - name: Run npm build
+        if: steps.check_commits.outputs.has_new_commits == 'true' || github.event_type == 'repository_dispatch'
+        working-directory: nodejs
+        run: |
+          npm i
+          npm run build
+
+      - name: Archive dist
+        if: steps.check_commits.outputs.has_new_commits == 'true' || github.event_type == 'repository_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: |
+            nodejs/dist
+
+      - name: Create Release and Upload Artifact
+        if: steps.check_commits.outputs.has_new_commits == 'true' || github.event_type == 'repository_dispatch'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: nodejs/dist/**  # 指定上传的文件路径
+          tag_name: ${{ github.ref_name }}  # 使用分支名作为标签
+          name: ${{ github.ref_name }} Release  # Release 名称
+          body: "Automated release from ${{ github.ref_name }} branch"  # Release 描述
+          token: ${{ secrets.GITHUB_TOKEN }}  # 使用 GitHub Token 进行身份验证
