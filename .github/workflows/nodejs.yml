@@ -8,9 +8,25 @@ on:
       - main
     paths:
       - '**'  # 检测所有文件路径
-  repository_dispatch:  # 支持手动触发
-    types:
-      - manual_trigger  # 自定义事件类型
+  workflow_dispatch:  # 支持手动触发
+    inputs:
+      logLevel:
+        description: 'Log level'
+        required: false
+        default: 'info'
+        type: choice
+        options:
+          - info
+          - warning
+          - debug
+      tags:
+        description: 'Test scenario tags'
+        required: false
+        type: boolean
+      environment:
+        description: 'Environment to run tests against'
+        required: false
+        type: environment
 
 jobs:
   build:
@@ -39,39 +55,39 @@ jobs:
           fi
 
       - name: Set up Node.js
-        if: steps.check_commits.outputs.has_new_commits == 'true' || github.event_type == 'repository_dispatch'
+        if: steps.check_commits.outputs.has_new_commits == 'true' || github.event_name == 'workflow_dispatch'
         uses: actions/setup-node@v3
         with:
           node-version: 18.17.1
 
       - name: Run npm build
-        if: steps.check_commits.outputs.has_new_commits == 'true' || github.event_type == 'repository_dispatch'
+        if: steps.check_commits.outputs.has_new_commits == 'true' || github.event_name == 'workflow_dispatch'
         working-directory: nodejs
         run: |
           npm i
           npm run build
 
       - name: Archive dist
-        if: steps.check_commits.outputs.has_new_commits == 'true' || github.event_type == 'repository_dispatch'
+        if: steps.check_commits.outputs.has_new_commits == 'true' || github.event_name == 'workflow_dispatch'
         run: |
           cd nodejs/dist
           zip -r cat.zip .  # 打包 nodejs/dist 文件夹内的所有文件
           mv cat.zip ../  # 将生成的 cat.zip 移动到 nodejs 目录下
 
       - name: Upload cat.zip
-        if: steps.check_commits.outputs.has_new_commits == 'true' || github.event_type == 'repository_dispatch'
+        if: steps.check_commits.outputs.has_new_commits == 'true' || github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
           name: cat.zip
           path: nodejs/cat.zip  # 指定上传 cat.zip 文件
 
       - name: Set TAG_NAME environment variable
-        if: steps.check_commits.outputs.has_new_commits == 'true' || github.event_type == 'repository_dispatch'
+        if: steps.check_commits.outputs.has_new_commits == 'true' || github.event_name == 'workflow_dispatch'
         run: |
           echo "TAG_NAME=$(date -u +'%Y%m%d-%H%M%S')" >> $GITHUB_ENV
 
       - name: Create Release and Upload Artifact
-        if: steps.check_commits.outputs.has_new_commits == 'true' || github.event_type == 'repository_dispatch'
+        if: steps.check_commits.outputs.has_new_commits == 'true' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v1
         with:
           files: nodejs/cat.zip  # 指定上传 cat.zip 文件
