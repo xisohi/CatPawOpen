@@ -53,10 +53,17 @@ jobs:
 
       - name: Archive dist
         if: steps.check_commits.outputs.has_new_commits == 'true' || github.event_type == 'repository_dispatch'
+        run: |
+          cd nodejs/dist
+          zip -r cat.zip .  # 打包 nodejs/dist 文件夹内的所有文件
+          mv cat.zip ../  # 将生成的 cat.zip 移动到 nodejs 目录下
+
+      - name: Upload cat.zip
+        if: steps.check_commits.outputs.has_new_commits == 'true' || github.event_type == 'repository_dispatch'
         uses: actions/upload-artifact@v4
         with:
-          name: dist
-          path: nodejs/dist  # 指定上传整个 nodejs/dist 文件夹
+          name: cat.zip
+          path: nodejs/cat.zip  # 指定上传 cat.zip 文件
 
       - name: Set TAG_NAME environment variable
         if: steps.check_commits.outputs.has_new_commits == 'true' || github.event_type == 'repository_dispatch'
@@ -67,7 +74,7 @@ jobs:
         if: steps.check_commits.outputs.has_new_commits == 'true' || github.event_type == 'repository_dispatch'
         uses: softprops/action-gh-release@v1
         with:
-          files: nodejs/dist/**  # 指定上传整个 nodejs/dist 文件夹
+          files: nodejs/cat.zip  # 指定上传 cat.zip 文件
           tag_name: ${{ env.TAG_NAME }}  # 使用构建时间作为标签
           name: ${{ github.ref_name }} Release  # Release 名称
           body: "Automated release from ${{ github.ref_name }} branch at ${{ env.TAG_NAME }}"  # Release 描述
