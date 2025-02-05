@@ -63,8 +63,6 @@ jobs:
         uses: softprops/action-gh-release@v1
         env:
           BUILD_TIME: ${{ github.run_started_at }}
-        run: |
-          echo "BUILD_TIME=${BUILD_TIME}" >> $GITHUB_ENV
         with:
           files: nodejs/dist  # 指定上传整个 nodejs/dist 文件夹
           tag_name: ${{ env.BUILD_TIME }}  # 使用构建时间作为标签
