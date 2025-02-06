@@ -32,4 +32,4 @@ Windows环境下计算文件md5 命令：certutil -hashfile index.config.js MD5�
 
 <img src="文本和图标.png" alt="文本和图标" />
 
-文本和图标：标题（蓝盔影视）文本内容（app说明.txt),修改图标文件。.
+文本和图标：标题（蓝盔影视）文本内容（app说明.txt),修改图标文件。
